@@ -11,27 +11,27 @@ use File::Basename qw(basename);
 
 # commands to be performed at keypress
 my %commands = (
-    'yellow'       => ['/usr/bin/hyperion-remote -c yellow'],
-    'blue'         => ['/usr/bin/hyperion-remote -c blue'],
-    'green'        => ['/usr/bin/hyperion-remote -c green'],
-    'red'          => ['/usr/bin/hyperion-remote -c red'],
+    'yellow' => ['/usr/bin/hyperion-remote -c yellow'],
+    'blue'   => ['/usr/bin/hyperion-remote -c blue'],
+    'green'  => ['/usr/bin/hyperion-remote -c green'],
+    'red'    => ['/usr/bin/hyperion-remote -c red'],
 
-    'below yellow' => ['/usr/bin/hyperion-remote --clearall', 'echo 0 >  /sys/class/gpio/gpio4/value'],
-    'below blue'   => ['/usr/bin/hyperion-remote --clearall', 'echo 1 >  /sys/class/gpio/gpio4/value'],
+    'below yellow' => [ '/usr/bin/hyperion-remote --clearall', 'echo 0 >  /sys/class/gpio/gpio4/value' ],
+    'below blue'   => [ '/usr/bin/hyperion-remote --clearall', 'echo 1 >  /sys/class/gpio/gpio4/value' ],
 
-    'clear'        => ['/usr/bin/hyperion-remote --clearall'],
-    'power'        => [ 'killall hyperion-v4l2', '/usr/bin/hyperion-remote --clearall' ],
-    'start'        => [
+    'clear' => ['/usr/bin/hyperion-remote --clearall'],
+    'power' => [ 'killall hyperion-v4l2', '/usr/bin/hyperion-remote --clearall' ],
+    'start' => [
         '/usr/bin/hyperion-v4l2 --width 720 --height 576 -d /dev/video0 --input 0 --pixel-format RGB32 -s 4 -f 1 -t 0.1 --crop-left 10 --crop-top 3 --crop-right 10 --crop-bottom 5 -v PAL 2>&1 >>/var/log/hyperion_v4l2.log &'
     ],
 );
 
 # configration of the input devices and their keys
-my @config = (
+my @inputs = (
     {
-        device => '/dev/input/event3',
-        dev    => undef,
-        keys   => [
+        device   => '/dev/input/event3',
+        modifier => [],
+        keys     => [
             { key => 172, name => 'home', },
             { key => 142, name => 'power', },
             { key => 165, name => '|<<', },
@@ -46,15 +46,15 @@ my @config = (
         ],
     },
     {
-        device => '/dev/input/event2',
-        dev    => undef,
-        keys   => [
-            { key => 29,  name => 'LEFTCTRL',  type => 'modifier', },
-            { key => 42,  name => 'LEFTSHIFT', type => 'modifier', },
-            { key => 56,  name => 'LEFTALT',   type => 'modifier', },
-            { key => 125, name => 'LEFTMETA',  type => 'modifier', },
-            { key => 69,  name => 'NUMLOCK',   type => 'modifier', },
-
+        device   => '/dev/input/event2',
+        modifier => [
+            { key => 29,  name => 'LEFTCTRL', },
+            { key => 42,  name => 'LEFTSHIFT', },
+            { key => 56,  name => 'LEFTALT', },
+            { key => 125, name => 'LEFTMETA', },
+            { key => 69,  name => 'NUMLOCK', },
+        ],
+        keys => [
             { key => 20, name => 'yellow', modifier => { LEFTCTRL => 1, LEFTSHIFT => 1 }, },
             { key => 50, name => 'blue',   modifier => { LEFTCTRL => 1 }, },
             { key => 23, name => 'green',  modifier => { LEFTCTRL => 1 }, },
@@ -97,22 +97,21 @@ my @config = (
     }
 );
 
-# modifiers of the input devices
-# TODO: use seperate modifiers for each device
-my %modifier = (
-    LEFTSHIFT => 0,
-    LEFTCTRL  => 0,
-    LEFTALT   => 0,
-    LEFTMETA  => 0,
-    NUMLOCK   => 0,
-);
-
-# open all inputs and store information in the config structure
+# open all inputs and store information in the inputs structure
 my $selector = IO::Select->new();
-foreach my $input (@config) {
+foreach my $input (@inputs) {
+
+    # create input device
     my $device = Linux::Input->new( $input->{device} );
+    
+    # add it to the selector
     $selector->add( $device->fh );
+
+    # store information in structure
     $input->{dev} = $device;
+    
+    # create reverse hash for faster set/get of modifier values
+    $input->{modifier_by_name} = { map { $_->{name} => { key => $_->{key}, value => 0 } } @{ $input->{modifier} } };
 }
 
 # endless loop
@@ -123,37 +122,39 @@ while ( my @fh = $selector->can_read ) {
     foreach my $fh (@fh) {
 
         # serach the matching input device
-        my $input = first { $_->{dev}->fh() == $fh } @config;
+        my $input = first { $_->{dev}->fh() == $fh } @inputs;
 
         # poll event from input
         my @events = $input->{dev}->poll();
-        
+
         foreach my $event (@events) {
             if ( $event->{type} == 1 ) {
                 my $code = $event->{code};
+
+                # look for modifiers in the config
+                my @modifiers = grep { $_->{key} == $code } @{ $input->{modifier} };
 
                 # look for key in config
                 my @keys = grep { $_->{key} == $code } @{ $input->{keys} };
 
                 # no matching key found -> print the code and event value
-                if ( !@keys ) {
+                if ( !@keys && !@modifiers ) {
                     print "code=$code, value=$event->{value}\n";
+                }
+
+                # for all modifiers: set the value in the modifier structure
+                foreach my $modifier (@modifiers) {
+                    $input->{modifier_by_name}->{ $modifier->{name} }->{value} = $event->{value};
                 }
 
                 # there may be more than one key with this code, so loop over them
                 foreach my $key (@keys) {
-                    my $type = $key->{type} // '';
-                    
-                    # if it is a modifier: set the value in the modifier structure
-                    if ( $type eq 'modifier' ) {
-                        $modifier{ $key->{name} } = $event->{value};
-                    }
 
-                    # if it is not a modifier, it must be a key
-                    if ( $type ne 'modifier' && $event->{value} == 1 ) {
+                    # key press?
+                    if ( $event->{value} == 1 ) {
 
                         # check the modifier of the key. Only if all match, the key is processed
-                        if ( all { $modifier{$_} == ( $key->{modifier}->{$_} // 0 ) } keys %modifier ) {
+                        if ( all { $input->{modifier_by_name}->{$_}->{value} == ( $key->{modifier}->{$_} // 0 ) } keys %{ $input->{modifier_by_name} } ) {
                             print "Found: $key->{name}\n";
 
                             # execute commands defined for this key

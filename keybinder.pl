@@ -9,7 +9,7 @@ use List::Util qw(first any all);
 
 use File::Basename qw(basename);
 
-# Config lesen / definieren
+# commands to be performed at keypress
 my %commands = (
     'yellow'       => ['/usr/bin/hyperion-remote -c yellow'],
     'blue'         => ['/usr/bin/hyperion-remote -c blue'],
@@ -26,6 +26,7 @@ my %commands = (
     ],
 );
 
+# configration of the input devices and their keys
 my @config = (
     {
         device => '/dev/input/event3',
@@ -96,7 +97,8 @@ my @config = (
     }
 );
 
-# merken der Modifier (shift, ctrl,....)
+# modifiers of the input devices
+# TODO: use seperate modifiers for each device
 my %modifier = (
     LEFTSHIFT => 0,
     LEFTCTRL  => 0,
@@ -105,7 +107,7 @@ my %modifier = (
     NUMLOCK   => 0,
 );
 
-# ueber alle inputs der config gehen und die entsprechenden Filehandles oeffnen und merken
+# open all inputs and store information in the config structure
 my $selector = IO::Select->new();
 foreach my $input (@config) {
     my $device = Linux::Input->new( $input->{device} );
@@ -113,44 +115,48 @@ foreach my $input (@config) {
     $input->{dev} = $device;
 }
 
+# endless loop
+# wait for event
 while ( my @fh = $selector->can_read ) {
 
-    # ueber alle Filehandles gehen, die Daten liefern
+    # loop over all filehandles and poll events
     foreach my $fh (@fh) {
 
-        # passenden Input zum Filehandle suchen
+        # serach the matching input device
         my $input = first { $_->{dev}->fh() == $fh } @config;
 
-        # Events von diesem Input holen
+        # poll event from input
         my @events = $input->{dev}->poll();
         
         foreach my $event (@events) {
             if ( $event->{type} == 1 ) {
                 my $code = $event->{code};
 
-                # passende Keys in der config suchen
+                # look for key in config
                 my @keys = grep { $_->{key} == $code } @{ $input->{keys} };
 
-                # kein key in der config gefunden -> code ausgeben
+                # no matching key found -> print the code and event value
                 if ( !@keys ) {
                     print "code=$code, value=$event->{value}\n";
                 }
 
-                # uber alle gefundenen keys mit diesem Code gehen
+                # there may be more than one key with this code, so loop over them
                 foreach my $key (@keys) {
                     my $type = $key->{type} // '';
                     
-                    # Modifier auswerten
+                    # if it is a modifier: set the value in the modifier structure
                     if ( $type eq 'modifier' ) {
                         $modifier{ $key->{name} } = $event->{value};
                     }
 
-                    # Key auswerten
+                    # if it is not a modifier, it must be a key
                     if ( $type ne 'modifier' && $event->{value} == 1 ) {
 
-                        # auf Modifier pruefen
+                        # check the modifier of the key. Only if all match, the key is processed
                         if ( all { $modifier{$_} == ( $key->{modifier}->{$_} // 0 ) } keys %modifier ) {
                             print "Found: $key->{name}\n";
+
+                            # execute commands defined for this key
                             for my $command ( @{ $commands{ $key->{name} } } ) {
                                 print "Exec: $command\n";
                                 system("$command");

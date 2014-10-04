@@ -1,0 +1,136 @@
+---
+- device: /dev/input/event3
+  keys:
+    - key: 172
+      name: home
+    - key: 142
+      name: power
+    - key: 165
+      name: '|<<'
+    - key: 164
+      name: play / pause
+    - key: 163
+      name: '>>|'
+    - key: 166
+      name: stop
+    - key: 272
+      name: left mouse btn
+    - key: 273
+      name: right mouse btn / i
+    - key: 115
+      name: vol up
+    - key: 114
+      name: vol down
+    - key: 113
+      name: mute
+  modifier: []
+- device: /dev/input/event2
+  keys:
+    - key: 20
+      modifier:
+        LEFTCTRL: 1
+        LEFTSHIFT: 1
+      name: yellow
+    - key: 50
+      modifier:
+        LEFTCTRL: 1
+      name: blue
+    - key: 23
+      modifier:
+        LEFTCTRL: 1
+      name: green
+    - key: 18
+      modifier:
+        LEFTCTRL: 1
+      name: red
+    - key: 24
+      modifier:
+        LEFTCTRL: 1
+      name: below yellow
+    - key: 34
+      modifier:
+        LEFTCTRL: 1
+      name: below blue
+    - key: 20
+      modifier:
+        LEFTCTRL: 1
+      name: below green
+    - key: 50
+      modifier:
+        LEFTCTRL: 1
+        LEFTSHIFT: 1
+      name: below red
+    - key: 48
+      modifier:
+        LEFTCTRL: 1
+        LEFTSHIFT: 1
+      name: <<
+    - key: 33
+      modifier:
+        LEFTCTRL: 1
+        LEFTSHIFT: 1
+      name: '>>'
+    - key: 19
+      modifier:
+        LEFTCTRL: 1
+      name: record
+    - key: 14
+      name: back
+    - key: 103
+      name: up
+    - key: 108
+      name: down
+    - key: 105
+      name: left
+    - key: 106
+      name: right
+    - key: 28
+      name: ok
+    - key: 104
+      name: channel up
+    - key: 109
+      name: channel down
+    - key: 28
+      modifier:
+        LEFTALT: 1
+        LEFTMETA: 1
+      name: start
+    - key: 79
+      name: 1
+    - key: 80
+      name: 2
+    - key: 81
+      name: 3
+    - key: 75
+      name: 4
+    - key: 76
+      name: 5
+    - key: 77
+      name: 6
+    - key: 71
+      name: 7
+    - key: 72
+      name: 8
+    - key: 73
+      name: 9
+    - key: 55
+      name: '*'
+    - key: 82
+      name: 0
+    - key: 62
+      modifier:
+        LEFTALT: 1
+      name: close
+    - key: 1
+      name: clear
+  modifier:
+    - key: 29
+      name: LEFTCTRL
+    - key: 42
+      name: LEFTSHIFT
+    - key: 56
+      name: LEFTALT
+    - key: 125
+      name: LEFTMETA
+    - key: 69
+      name: NUMLOCK

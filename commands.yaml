@@ -1,0 +1,34 @@
+---
+below blue:
+  - /usr/bin/hyperion-remote --clearall
+  - echo 1 >  /sys/class/gpio/gpio4/value
+below yellow:
+  - /usr/bin/hyperion-remote --clearall
+  - echo 0 >  /sys/class/gpio/gpio4/value
+blue:
+  - /usr/bin/hyperion-remote -c blue
+clear:
+  - /usr/bin/hyperion-remote --clearall
+green:
+  - /usr/bin/hyperion-remote -c green
+power:
+  - killall hyperion-v4l2
+  - /usr/bin/hyperion-remote --clearall
+red:
+  - /usr/bin/hyperion-remote -c red
+start:
+  - /usr/bin/hyperion-v4l2 --width 720 --height 576 -d /dev/video0 --input 0 --pixel-format RGB32 -s 4 -f 1 -t 0.1 --crop-left 10 --crop-top 3 --crop-right 10 --crop-bottom 5 -v PAL 2>&1 >>/var/log/hyperion_v4l2.log &
+yellow:
+  - /usr/bin/hyperion-remote -c yellow
+1:
+  - /usr/bin/hyperion-remote -e "Full color mood blobs"
+2:
+  - /usr/bin/hyperion-remote -e "Rainbow swirl fast"
+3:
+  - /usr/bin/hyperion-remote -e "Knight rider"
+4:
+  - /usr/bin/hyperion-remote -e "Warm mood blobs" 
+5:
+  - /usr/bin/hyperion-remote -e "Rainbow swirl"
+6:
+  - /usr/bin/hyperion-remote -e "Snake"
